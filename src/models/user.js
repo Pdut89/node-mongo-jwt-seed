@@ -7,7 +7,11 @@ const jwt = require('jsonwebtoken')
 
 const roles = require('../config/roles')
 
-const { JWT_SECRET } = process.env
+const { 
+  ACCESS_TOKEN_SECRET, 
+  REFRESH_TOKEN_SECRET,
+  TOKEN_EXPIRY_SECONDS,
+} = process.env
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -29,7 +33,11 @@ const userSchema = new mongoose.Schema({
     required: true
   },
   tokens: [{
-    token: {
+    accessToken: {
+      type: String,
+      required: true
+    },
+    refreshToken: {
       type: String,
       required: true
     }
@@ -38,7 +46,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     validate(val) {
-      console.log(roles)
       if (!roles.includes(val)) throw new Error('Not a valid role.')
     }
   }
@@ -52,21 +59,26 @@ userSchema.methods.getPublicProfile = function () {
 
   delete userObj.password
   delete userObj.tokens
-  delete userObj.token
+  delete userObj.accessToken
 
   return userObj
 }
 
-userSchema.methods.generateAuthToken = async function () {
+userSchema.methods.generateAuthTokens = async function () {
   const user = this
   const _id = user._id.toString()
-  const config = { expiresIn: 3 }
-  const token = jwt.sign({ _id }, JWT_SECRET.toString(), config)
+  const config = { expiresIn: parseInt(TOKEN_EXPIRY_SECONDS) }
 
-  user.tokens = [...user.tokens, { token }]
+  const accessToken = jwt.sign({ _id }, ACCESS_TOKEN_SECRET.toString(), config)
+  const refreshToken = jwt.sign({ _id }, REFRESH_TOKEN_SECRET.toString())
+
+  user.tokens = [...user.tokens, { accessToken, refreshToken }]
   await user.save()
   
-  return token
+  return {
+    accessToken,
+    refreshToken
+  }
 }
 
 userSchema.statics.findByCredentials = async (email, password) => {

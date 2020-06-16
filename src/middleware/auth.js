@@ -3,24 +3,57 @@ require('dotenv').config()
 const jwt = require('jsonwebtoken')
 const User = require('../models/user')
 
-const { JWT_SECRET } = process.env
+const { ACCESS_TOKEN_SECRET } = process.env
 
-const auth = async (req, res, next) => {
-  try {
-    const token = req.header('Authorization').replace('Bearer ', '')
-    const decoded = jwt.verify(token, JWT_SECRET)
-    console.log('decoded: ', decoded)
-    const user = await User.findOne({ _id: decoded._id, 'tokens.token': token })
-    
-    if (!user) throw new Error()
-
-    req.token = token
-    req.user = user
-    next()
-  } catch (error) {
-    console.log(error)
-    res.status(401).send({error: 'Please authenticate.'})
-  }
+function throwPermissionsError (res) {
+  res.status(403).send({ error: 'User does not have the required permissions'})
 }
 
-module.exports = auth
+const authenticate = async (req, res) => {
+  try {
+    const accessToken = req.header('Authorization').replace('Bearer ', '')
+    const decoded = jwt.verify(accessToken, ACCESS_TOKEN_SECRET)
+
+    const user = await User.findOne({
+      _id: decoded._id,
+      'tokens.accessToken': accessToken
+    })
+
+    if (!user) throw new Error('Could not user with matching access token')
+
+    req.accessToken = accessToken
+    req.user = user
+
+    return user.role
+
+  } catch (error) {
+    console.log(error)
+    res.status(401).send({ error: 'Please authenticate.' })
+  } 
+}
+
+const auth = async (req, res, next) => {
+  const role = await authenticate(req, res)
+  if (role) next()
+}
+
+const authAdmin = async (req, res, next) => {
+  const role = await authenticate(req, res)
+  const isAdmin = ['super-admin', 'admin'].includes(role)
+  if (!isAdmin) return throwPermissionsError(res) 
+  next()
+}
+
+
+const authSuperAdmin = async (req, res, next) => {
+  const role = await authenticate(req, res)
+  const isSuperAdmin = role === 'super-admin' 
+  if (!isSuperAdmin) return throwPermissionsError(res) 
+  next()
+}
+
+module.exports = {
+  authSuperAdmin,
+  authAdmin,
+  auth
+}
