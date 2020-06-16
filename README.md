@@ -1,7 +1,7 @@
 EXPRESS MONGO JWT SEED
 ===============
 
-#ENV Required Variables:
+# ENV Required Variables:
 * PORT
 * MONGO_URL
 * DB_NAME
