@@ -4,7 +4,6 @@ const User = require('../models/user')
 
 const { 
   auth,
-  authAdmin,
   authSuperAdmin
 } = require('../middleware/auth')
 

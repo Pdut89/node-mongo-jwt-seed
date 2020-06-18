@@ -46,7 +46,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     validate(val) {
-      if (!roles.includes(val)) throw new Error('Not a valid role.')
+      const rolesArr = Object.keys(roles).map(key => roles[key])
+      if (!rolesArr.includes(val)) throw new Error('Not a valid role.')
     }
   }
 }, {

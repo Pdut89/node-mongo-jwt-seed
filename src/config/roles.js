@@ -1,2 +1,7 @@
-const roles = ['super-admin', 'admin', 'user']
+const roles = {
+  superAdmin: 'super-admin', 
+  admin: 'admin', 
+  user: 'user'
+}
+
 module.exports = roles

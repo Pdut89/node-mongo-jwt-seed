@@ -1,5 +1,5 @@
 require('dotenv').config()
-
+const roles = require('../config/roles')
 const jwt = require('jsonwebtoken')
 const User = require('../models/user')
 
@@ -38,8 +38,9 @@ const auth = async (req, res, next) => {
 }
 
 const authAdmin = async (req, res, next) => {
+  const { superAdmin, admin } = roles
   const role = await authenticate(req, res)
-  const isAdmin = ['super-admin', 'admin'].includes(role)
+  const isAdmin = [superAdmin, admin].includes(role)
   if (!isAdmin) return throwPermissionsError(res) 
   next()
 }
@@ -47,7 +48,7 @@ const authAdmin = async (req, res, next) => {
 
 const authSuperAdmin = async (req, res, next) => {
   const role = await authenticate(req, res)
-  const isSuperAdmin = role === 'super-admin' 
+  const isSuperAdmin = role === roles.superAdmin
   if (!isSuperAdmin) return throwPermissionsError(res) 
   next()
 }
