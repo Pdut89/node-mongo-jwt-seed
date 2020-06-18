@@ -10,7 +10,8 @@ const roles = require('../config/roles')
 const { 
   ACCESS_TOKEN_SECRET, 
   REFRESH_TOKEN_SECRET,
-  TOKEN_EXPIRY_SECONDS,
+  ACCESS_TOKEN_EXPIRY,
+  REFRESH_TOKEN_EXPIRY
 } = process.env
 
 const userSchema = new mongoose.Schema({
@@ -68,10 +69,13 @@ userSchema.methods.getPublicProfile = function () {
 userSchema.methods.generateAuthTokens = async function () {
   const user = this
   const _id = user._id.toString()
-  const config = { expiresIn: parseInt(TOKEN_EXPIRY_SECONDS) }
+  
+  const config = isRefreshToken => ({ 
+    expiresIn: parseInt(isRefreshToken ? REFRESH_TOKEN_EXPIRY : ACCESS_TOKEN_EXPIRY) 
+  })
 
-  const accessToken = jwt.sign({ _id }, ACCESS_TOKEN_SECRET.toString(), config)
-  const refreshToken = jwt.sign({ _id }, REFRESH_TOKEN_SECRET.toString())
+  const accessToken = jwt.sign({ _id }, ACCESS_TOKEN_SECRET.toString(), config())
+  const refreshToken = jwt.sign({ _id }, REFRESH_TOKEN_SECRET.toString(), config(true))
 
   user.tokens = [...user.tokens, { accessToken, refreshToken }]
   await user.save()
@@ -82,12 +86,29 @@ userSchema.methods.generateAuthTokens = async function () {
   }
 }
 
+userSchema.statics.removeInvalidTokens = async (email, token) => {
+  const user = await User.findOne({ email })
+  if (!user) throw new Error('User not found')
+
+  const { tokens } = user
+  user.tokens = tokens
+    .filter(({ accessToken }) => token ? accessToken !== token : true)
+    .filter(({refreshToken}) => {
+      const { exp } = jwt.decode(refreshToken)
+      const isExpired = Date.now() >= exp * 1000
+      return !isExpired
+    })
+
+  await user.save()
+  return
+}
+
 userSchema.statics.findByCredentials = async (email, password) => {
   const user = await User.findOne({ email })
-  if (!user) throw new Error('User not found.')
+  if (!user) throw new Error('Invalid login details')
 
   const isMatch = await bcrypt.compare(password, user.password)
-  if (!isMatch) throw new Error('Unable to log in')
+  if (!isMatch) throw new Error('Invalid login details')
 
   return user
 }

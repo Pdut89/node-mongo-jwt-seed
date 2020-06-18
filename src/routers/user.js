@@ -27,28 +27,28 @@ router.post('/user', async (req, res) => {
 })
 
 router.post('/user/login', async (req, res) => {
-  const { email, password } = req.body
+  const { email, password } = req.body 
   try {
     const response = await User.findByCredentials(email, password)
     const user = response.getPublicProfile()
     const authTokens = await response.generateAuthTokens()
-
+    await User.removeInvalidTokens(email)
+    
     res.send({ 
       user,
       ...authTokens
     })
   } catch (error) {
     console.log(error)
-    res.status(400).send()
+    res.status(400).send(error.message)
   }
 })
 
 router.post('/user/logout', auth, async (req,res) => {
-  const { tokens } = req.user
+  const { email } = req.user
   try {
-    req.user.tokens = tokens.filter(({ accessToken }) => accessToken !== req.accessToken)
-    await req.user.save()
-    res.send()
+    await User.removeInvalidTokens(email, req.accessToken)
+    res.send('User logged out successfully')
   } catch (error) {
     console.log(error)
     res.status(500).send()

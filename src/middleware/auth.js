@@ -19,7 +19,7 @@ const authenticate = async (req, res) => {
       'tokens.accessToken': accessToken
     })
 
-    if (!user) throw new Error('Could not user with matching access token')
+    if (!user) throw new Error('Could not find user with matching access token')
 
     req.accessToken = accessToken
     req.user = user
@@ -44,7 +44,6 @@ const authAdmin = async (req, res, next) => {
   if (!isAdmin) return throwPermissionsError(res) 
   next()
 }
-
 
 const authSuperAdmin = async (req, res, next) => {
   const role = await authenticate(req, res)
