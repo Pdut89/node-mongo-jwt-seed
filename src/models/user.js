@@ -70,7 +70,7 @@ userSchema.methods.generateAuthTokens = async function () {
   const user = this
   const _id = user._id.toString()
   
-  const config = isRefreshToken => ({ 
+  const config = isRefreshToken => ({
     expiresIn: parseInt(isRefreshToken ? REFRESH_TOKEN_EXPIRY : ACCESS_TOKEN_EXPIRY) 
   })
 
@@ -86,14 +86,36 @@ userSchema.methods.generateAuthTokens = async function () {
   }
 }
 
-userSchema.statics.removeInvalidTokens = async (email, token) => {
-  const user = await User.findOne({ email })
+userSchema.statics.verifyRefreshToken = async (email, refreshToken, accessToken) => {
+
+  const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET)
+
+  const user = await User.findOne({
+    email,
+    _id: decoded._id,
+    'tokens.accessToken': accessToken,
+    'tokens.refreshToken': refreshToken
+  })
+
+  if (!user) throw new Error('Refresh token could not be verified')
+  return user
+}
+
+userSchema.statics.removeInvalidTokens = async (email, accessToken, refreshToken) => {
+
+  const user = await User.findOne({ 
+    ...email && {email},
+    ...accessToken && {'tokens.accessToken': accessToken},
+    ...refreshToken && {'tokens.refreshToken': refreshToken}
+  })
+
   if (!user) throw new Error('User not found')
 
   const { tokens } = user
   user.tokens = tokens
-    .filter(({ accessToken }) => token ? accessToken !== token : true)
-    .filter(({refreshToken}) => {
+    .filter(token => accessToken ? token.accessToken !== accessToken : true)
+    .filter(token => refreshToken ? token.refreshToken !== refreshToken : true)
+    .filter(({ refreshToken }) => {
       const { exp } = jwt.decode(refreshToken)
       const isExpired = Date.now() >= exp * 1000
       return !isExpired

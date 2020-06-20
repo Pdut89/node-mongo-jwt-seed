@@ -16,13 +16,15 @@ const cors = require('cors')
 const app = express()
 
 const userRouter = require('./routers/user')
+const authRouter = require('./routers/auth')
 
 app.use(cors(corsConfig))
 app.use(express.json())
+app.use(authRouter)
 app.use(userRouter)
 
 app.get('/', (req, res) => {
-  res.send('Remax MongoDB Server')
+  res.send('Node Express Mongo Server')
 })
 
 app.listen(PORT, () => {

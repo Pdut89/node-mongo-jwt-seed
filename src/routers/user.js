@@ -26,35 +26,6 @@ router.post('/user', async (req, res) => {
   }
 })
 
-router.post('/user/login', async (req, res) => {
-  const { email, password } = req.body 
-  try {
-    const response = await User.findByCredentials(email, password)
-    const user = response.getPublicProfile()
-    const authTokens = await response.generateAuthTokens()
-    await User.removeInvalidTokens(email)
-    
-    res.send({ 
-      user,
-      ...authTokens
-    })
-  } catch (error) {
-    console.log(error)
-    res.status(400).send(error.message)
-  }
-})
-
-router.post('/user/logout', auth, async (req,res) => {
-  const { email } = req.user
-  try {
-    await User.removeInvalidTokens(email, req.accessToken)
-    res.send('User logged out successfully')
-  } catch (error) {
-    console.log(error)
-    res.status(500).send()
-  }
-})
-
 router.get('/user', auth, async (req, res) => {
   try {
     const users = await User.find()
@@ -109,7 +80,5 @@ router.delete('/user/:id', authSuperAdmin, async (req, res) => {
     res.status(500).send(error)
   }
 })
-
-
 
 module.exports = router
