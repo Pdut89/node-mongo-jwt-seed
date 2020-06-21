@@ -12,6 +12,8 @@ const corsConfig = {
 }
 
 const express = require('express')
+const helmet = require('helmet')
+const morgan = require('morgan')
 const cors = require('cors')
 const app = express()
 
@@ -19,6 +21,9 @@ const userRouter = require('./routers/user')
 const authRouter = require('./routers/auth')
 
 app.use(cors(corsConfig))
+app.use(helmet())
+app.use(morgan('common'))
+
 app.use(express.json())
 app.use(authRouter)
 app.use(userRouter)
